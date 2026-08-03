@@ -1,0 +1,62 @@
+name: agent-rules
+
+on:
+  push:
+  pull_request:
+  repository_dispatch:
+    types: [agent-rules-release]
+
+jobs:
+  # Fail if AGENTS.md drifted from the pinned rules (hand-edited, or AGENTS.project.md
+  # changed without a re-sync). agent-rules is public, so no secret is needed.
+  check:
+    if: github.event_name != 'repository_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: pin
+        run: echo "version=$(jq -r .version .agentrules.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: nomad-computer/agent-rules
+          ref: v${{ steps.pin.outputs.version }}
+          path: .agent-rules-src
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node .agent-rules-src/bin/agent-rules sync --check --source .agent-rules-src
+
+  # Triggered by the agent-rules release fan-out: re-sync against the new version
+  # and open a bump PR. Requires "Allow GitHub Actions to create and approve pull
+  # requests" (Settings -> Actions -> General).
+  bump:
+    if: github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: nomad-computer/agent-rules
+          ref: ${{ github.event.client_payload.version }}
+          path: .agent-rules-src
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node .agent-rules-src/bin/agent-rules sync --source .agent-rules-src
+      - run: rm -rf .agent-rules-src
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: bump agent-rules to ${{ github.event.client_payload.version }}"
+          title: "chore: bump agent-rules to ${{ github.event.client_payload.version }}"
+          body: |
+            Automated by the agent-rules release.
+            Regenerated `AGENTS.md` from `${{ github.event.client_payload.version }}`.
+          branch: agent-rules/${{ github.event.client_payload.version }}
+          add-paths: |
+            AGENTS.md
+            CLAUDE.md
+            GEMINI.md
+            .agentrules.json
