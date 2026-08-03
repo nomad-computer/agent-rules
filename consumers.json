@@ -1,0 +1,15 @@
+{
+  "repos": [
+    "nomad-computer/braveos",
+    "nomad-computer/agamemnon",
+    "nomad-computer/alexander",
+    "nomad-computer/apollo",
+    "nomad-computer/baikal",
+    "nomad-computer/caesar",
+    "nomad-computer/rosetta",
+    "nomad-computer/rosetta-studio",
+    "nomad-asterisk/desktop",
+    "nomad-asterisk/engine",
+    "nomad-interactive/tower-dungeon"
+  ]
+}

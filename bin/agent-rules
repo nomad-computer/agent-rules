@@ -3,11 +3,17 @@
 
 // agent-rules — vendor the shared Working rules into a project's AGENTS.md and
 // refresh the CLAUDE.md / GEMINI.md pointers. Zero dependencies.
+//
+//   agent-rules sync   [--source <path>]   regenerate AGENTS.md/CLAUDE.md/GEMINI.md,
+//                                           and pin .agentrules.json to the source version
+//   agent-rules sync --check [--source ..]  exit non-zero if AGENTS.md is stale or the
+//                                           pinned version does not match the source
 
 const fs = require('fs');
 const path = require('path');
 
 const CWD = process.cwd();
+const CONFIG = path.join(CWD, '.agentrules.json');
 
 function die(msg) {
   console.error('agent-rules: ' + msg);
@@ -25,13 +31,12 @@ const STACK_FILES = {
 };
 
 function readConfig() {
-  const p = path.join(CWD, '.agentrules.json');
-  if (!fs.existsSync(p)) {
+  if (!fs.existsSync(CONFIG)) {
     die('no .agentrules.json in ' + CWD +
         ' — copy templates/.agentrules.json from the agent-rules repo.');
   }
   try {
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
+    return JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
   } catch (e) {
     return die('.agentrules.json is not valid JSON: ' + e.message);
   }
@@ -124,19 +129,30 @@ function main() {
   const target = path.join(CWD, 'AGENTS.md');
 
   if (args.check) {
+    const problems = [];
     const current = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : '';
-    if (current !== agents) {
-      console.error('agent-rules: AGENTS.md is OUT OF DATE (run `agent-rules sync`).');
+    if (current !== agents) problems.push('AGENTS.md is out of date');
+    if (cfg.version !== version) {
+      problems.push('pinned version "' + (cfg.version || '(none)') +
+        '" does not match source version "' + version + '"');
+    }
+    if (problems.length) {
+      console.error('agent-rules: ' + problems.join('; ') + ' — run `agent-rules sync`.');
       process.exit(2);
     }
-    console.log('agent-rules: AGENTS.md is up to date (v' + version + ').');
+    console.log('agent-rules: up to date (v' + version + ').');
     return;
   }
 
   fs.writeFileSync(target, agents);
   fs.writeFileSync(path.join(CWD, 'CLAUDE.md'), CLAUDE_MD);
   fs.writeFileSync(path.join(CWD, 'GEMINI.md'), GEMINI_MD);
-  console.log('agent-rules: wrote AGENTS.md (v' + version + '), CLAUDE.md, GEMINI.md');
+
+  // Pin the project to the version it was generated from.
+  cfg.version = version;
+  fs.writeFileSync(CONFIG, JSON.stringify(cfg, null, 2) + '\n');
+
+  console.log('agent-rules: wrote AGENTS.md (v' + version + '), CLAUDE.md, GEMINI.md; pinned v' + version + '.');
 }
 
 main();

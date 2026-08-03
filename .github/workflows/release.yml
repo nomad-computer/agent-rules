@@ -1,0 +1,42 @@
+name: release
+
+# On a new version tag, tell every consumer repo to regenerate its AGENTS.md
+# against this version and open a bump PR. Each consumer handles its own PR with
+# its own GITHUB_TOKEN (see the `agent-rules` workflow in the consumer repos);
+# this job only needs to *send* the repository_dispatch event.
+#
+# Requires a repo secret CONSUMER_DISPATCH_TOKEN — a PAT that can send a
+# repository_dispatch to each repo in consumers.json (they live across several
+# orgs, so the built-in GITHUB_TOKEN is not enough). Fine-grained PAT scope:
+# "Contents: read & write" (or classic scope: `repo`) on the consumer repos.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.list.outputs.repos }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "repos=$(jq -c '.repos' consumers.json)" >> "$GITHUB_OUTPUT"
+
+  dispatch:
+    needs: load
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repo: ${{ fromJSON(needs.load.outputs.repos) }}
+    steps:
+      - name: Dispatch ${{ github.ref_name }} to ${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.CONSUMER_DISPATCH_TOKEN }}
+        run: |
+          gh api "repos/${{ matrix.repo }}/dispatches" \
+            -f event_type=agent-rules-release \
+            -F "client_payload[version]=${{ github.ref_name }}"
