@@ -32,30 +32,95 @@ directly.
   - `_intro.md`, `core.md`, `language.md`, `commits.md`, `pull-requests.md` — always included.
   - `rust.md`, `typescript-react.md`, `godot.md` — included per the project's `stacks`.
 - `bin/agent-rules` — the sync CLI (Node, zero dependencies).
-- `templates/` — starter `.agentrules.json` and `AGENTS.project.md`.
+- `templates/` — starters to copy into a project: `.agentrules.json`,
+  `AGENTS.project.md`, and the drift-check workflow `agent-rules.yml`.
+- `consumers.json` — the repos the release fan-out opens bump PRs in.
 - `VERSION` — the version stamped into each generated `AGENTS.md`.
 
-## Use it in a project
+## Add it to a new project
 
-1. Copy `templates/.agentrules.json` to the project root and set its `stacks`:
+Only two files live in the project: `.agentrules.json` (config) and
+`AGENTS.project.md` (the project guide). Everything else is generated. The steps
+assume `agent-rules` is checked out next to your projects (e.g.
+`~/Documents/agent-rules`) — clone it once if not:
+
+```bash
+git clone https://github.com/nomad-computer/agent-rules ../agent-rules
+```
+
+1. **Config** — create `.agentrules.json` at the project root:
 
    ```json
    { "source": "../agent-rules", "stacks": ["rust", "typescript-react"] }
    ```
 
-2. Copy `templates/AGENTS.project.md` to the project root and write the project
-   guide (or move an existing project-specific section into it).
+   - `source` — relative path from the project to your `agent-rules` checkout.
+     Used only by local `sync`; **CI ignores it**. A nested project (e.g.
+     `foo/desktop`) uses `"../../agent-rules"`.
+   - `stacks` — any of `rust`, `typescript-react`, `godot` (see *Known stacks*);
+     use `[]` if none apply.
+   - Don't add `version` by hand — `sync` writes and pins it.
 
-3. Generate the files:
+2. **Project guide** — copy the starter and fill it in:
 
    ```bash
-   node ../agent-rules/bin/agent-rules sync     # → writes AGENTS.md, CLAUDE.md, GEMINI.md
+   cp ../agent-rules/templates/AGENTS.project.md AGENTS.project.md
    ```
 
-   Review the diff and commit. Re-run `sync` whenever this repo changes.
+   Write *What / Architecture / Layout / Build*. Put any project-specific
+   language or commit **exceptions** here — the shared rules already state the
+   baseline, so only note where this project differs.
+
+3. **Generate** the entry files:
+
+   ```bash
+   node ../agent-rules/bin/agent-rules sync
+   # → writes AGENTS.md, CLAUDE.md, GEMINI.md; pins the version in .agentrules.json
+   ```
+
+4. **Drift-check CI** — copy the workflow:
+
+   ```bash
+   mkdir -p .github/workflows
+   cp ../agent-rules/templates/agent-rules.yml .github/workflows/agent-rules.yml
+   ```
+
+5. **Register for release fan-out** — add the repo's `owner/name` to
+   `consumers.json` in *this* repo (commit + push here), so future version bumps
+   open a PR in the new project too.
+
+6. **README** — if AI helped build the project, add the one acknowledgment line
+   (this is where it lives, not in per-commit trailers):
+
+   ```
+   Parts of this project were developed with AI assistance (Claude).
+   ```
+
+7. **Commit** the config + generated files + workflow:
+
+   ```bash
+   git add AGENTS.md CLAUDE.md GEMINI.md AGENTS.project.md .agentrules.json \
+           .github/workflows/agent-rules.yml
+   git commit -m "chore: adopt shared agent-rules"
+   ```
+
+8. **One-time GitHub setting** — only if the repo is in an org not yet
+   configured: enable *org → Settings → Actions → General → Allow GitHub Actions
+   to create and approve pull requests*, so bump PRs can be opened. (Already on
+   for `nomad-computer`, `nomad-asterisk`, `nomad-interactive`.)
+
+## Update an existing project
+
+Re-run `sync` after changing `AGENTS.project.md`, or to pick up a new
+`agent-rules` version (the release bot also opens this as a PR):
+
+```bash
+node ../agent-rules/bin/agent-rules sync   # then review the diff and commit
+```
 
 `agent-rules sync --check` regenerates in memory and exits non-zero if the
-committed `AGENTS.md` is stale — use it in CI.
+committed `AGENTS.md` is stale or the pinned version drifted — this is what the
+drift-check workflow runs in CI.
 
 ## Known stacks
 
