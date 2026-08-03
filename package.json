@@ -1,0 +1,9 @@
+{
+  "name": "@nomad-computer/agent-rules",
+  "version": "1.0.0",
+  "description": "Shared AI-agent guidance, vendored into each project's AGENTS.md.",
+  "bin": { "agent-rules": "bin/agent-rules" },
+  "type": "commonjs",
+  "license": "UNLICENSED",
+  "files": ["bin", "rules", "templates", "VERSION"]
+}

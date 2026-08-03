@@ -1,0 +1,4 @@
+{
+  "source": "../agent-rules",
+  "stacks": ["rust", "typescript-react"]
+}
