@@ -1,0 +1,19 @@
+name: self-check
+
+# This repo consumes its own rules. Fail if AGENTS.md is stale — i.e. rules/*.md
+# or AGENTS.project.md changed without re-running `node bin/agent-rules sync`.
+# Uses source "." (its own current rules), so there is no tag to pin against.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  self-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node bin/agent-rules sync --check --source .
