@@ -13,6 +13,7 @@
     "nomad-asterisk/desktop",
     "nomad-asterisk/engine",
     "nomad-interactive/tower-dungeon",
-    "nomad-interactive/fantasy-wars"
+    "nomad-interactive/fantasy-wars",
+    "nomad-interactive/clan-battle"
   ]
 }
