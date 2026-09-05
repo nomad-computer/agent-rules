@@ -14,6 +14,7 @@
     "nomad-asterisk/engine",
     "nomad-interactive/tower-dungeon",
     "nomad-interactive/fantasy-wars",
-    "nomad-interactive/clan-battle"
+    "nomad-interactive/clan-battle",
+    "nomad-interactive/galactic-foodtruck"
   ]
 }
